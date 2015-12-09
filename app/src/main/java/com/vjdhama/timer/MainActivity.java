@@ -1,8 +1,12 @@
 package com.vjdhama.timer;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -13,12 +17,17 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity {
+    public static final String MINUTE = "minute";
+    public static final String SECOND = "second";
+    public static final String TIMER_STATUS = "TimerStatus";
+    public static String BROADCAST_ACTION = "com.vjdhama.timer.TimerIntent";
 
     TextView txtClicks;
     Timer timer;
     long startNewTime;
     Button startButton;
     boolean isTimerOn = false;
+    BroadcastReceiver timerReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -26,16 +35,31 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         startButton = (Button) findViewById(R.id.timerButton);
         txtClicks = (TextView) findViewById(R.id.time_text_view);
+
         timer = new Timer();
+
+        timerReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                Boolean isTimerOn = intent.getBooleanExtra(TIMER_STATUS, false);
+                if (isTimerOn) {
+                    Long minutes = intent.getLongExtra(MINUTE, 0);
+                    Long seconds = intent.getLongExtra(SECOND, 0);
+                    txtClicks.setText(String.format("%02d:%02d", minutes, seconds));
+                } else {
+                    Toast.makeText(MainActivity.this, "Finished", Toast.LENGTH_SHORT).show();
+                }
+            }
+        };
 
         startButton.setOnClickListener(new MyOnClickListener());
     }
+
 
     @Override
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putLong("startTime", startNewTime);
-        Log.d("Timer", "new " + startNewTime);
         outState.putBoolean("Times", isTimerOn);
     }
 
@@ -51,6 +75,19 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        IntentFilter updateTimer = new IntentFilter(BROADCAST_ACTION);
+        LocalBroadcastManager.getInstance(this).registerReceiver(timerReceiver, updateTimer);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(timerReceiver);
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
         timer.cancel();
@@ -61,7 +98,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     class MyTimerTask extends TimerTask {
-
         long startTime;
 
         public MyTimerTask(long startNewTime) {
@@ -73,18 +109,19 @@ public class MainActivity extends AppCompatActivity {
             long elapsedSecs = (new Date().getTime() - startTime) / 1000;
             final long seconds = elapsedSecs % 60;
             final long minutes = elapsedSecs / 60;
+            Intent timerUpdateIntent = new Intent(BROADCAST_ACTION);
 
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    txtClicks.setText(String.format("%02d:%02d", minutes, seconds));
-                    if (minutes == 1) {
-                        Toast.makeText(MainActivity.this, "Finished", Toast.LENGTH_SHORT).show();
-                        timer.cancel();
-                        isTimerOn = false;
-                    }
+            if (minutes >= 1) {
+                if (timer != null) {
+                    timer.cancel();
                 }
-            });
+                isTimerOn = false;
+
+            }
+            timerUpdateIntent.putExtra(MINUTE, minutes);
+            timerUpdateIntent.putExtra(SECOND, seconds);
+            timerUpdateIntent.putExtra(TIMER_STATUS, isTimerOn);
+            LocalBroadcastManager.getInstance(MainActivity.this).sendBroadcast(timerUpdateIntent);
         }
     }
 
