@@ -43,8 +43,7 @@ public class PomodoroService extends Service {
         NotificationManager notificationManager = (NotificationManager) getSystemService(this.NOTIFICATION_SERVICE);
 
         Intent resultIntent = new Intent(this, MainActivity.class)
-                .setAction(Intent.ACTION_MAIN)
-                .addCategory(Intent.CATEGORY_LAUNCHER);
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
 
         PendingIntent resultPendingIntent =
                 PendingIntent.getActivity(
