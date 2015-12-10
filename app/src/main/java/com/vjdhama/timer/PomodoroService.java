@@ -113,21 +113,30 @@ public class PomodoroService extends Service {
             final long minutes = elapsedSecs / 60;
             Intent timerUpdateIntent = new Intent(MainActivity.BROADCAST_ACTION);
 
-            if (seconds >= 10) {
+            if (seconds >= 9) {
                 if (timer != null) {
+                    Intent intent = new Intent(PomodoroService.this, MainActivity.class)
+                            .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+
+                    intent.putExtra(MainActivity.TIMER_STATUS, true);
+
+                    Log.d(PAMADORO_SERVICE, String.valueOf(isTimerOn));
+
+                    startActivity(intent);
+
                     timer.cancel();
                     sharedPreferences.edit().remove(START_TIME).apply();
                     stopForeground(true);
                 }
+
                 isTimerOn = false;
 
-            }
-            else {
+            }else {
                 startForgroundService("Time " + minutes + ":" + seconds);
+                timerUpdateIntent.putExtra(MainActivity.TIMER_STATUS, isTimerOn);
             }
             timerUpdateIntent.putExtra(MainActivity.MINUTE, minutes);
             timerUpdateIntent.putExtra(MainActivity.SECOND, seconds);
-            timerUpdateIntent.putExtra(MainActivity.TIMER_STATUS, isTimerOn);
 
             Log.d(PAMADORO_SERVICE, " Minutes : " + minutes);
             Log.d(PAMADORO_SERVICE, " Seconds : " + seconds);

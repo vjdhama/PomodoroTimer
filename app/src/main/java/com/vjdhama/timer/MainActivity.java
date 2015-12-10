@@ -7,6 +7,7 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -37,8 +38,6 @@ public class MainActivity extends AppCompatActivity {
                     Long minutes = intent.getLongExtra(MINUTE, 0);
                     Long seconds = intent.getLongExtra(SECOND, 0);
                     txtClicks.setText(String.format("%02d:%02d", minutes, seconds));
-                } else {
-                    Toast.makeText(MainActivity.this, "Finished", Toast.LENGTH_SHORT).show();
                 }
             }
         };
@@ -49,13 +48,30 @@ public class MainActivity extends AppCompatActivity {
                 startService(new Intent(MainActivity.this, PomodoroService.class));
             }
         });
+
+        onNewIntent(getIntent());
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+
         IntentFilter updateTimer = new IntentFilter(BROADCAST_ACTION);
         LocalBroadcastManager.getInstance(this).registerReceiver(timerReceiver, updateTimer);
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+
+        Log.d("Main", " OnNewintent");
+
+        boolean isFinished = getIntent().getBooleanExtra(MainActivity.TIMER_STATUS, true);
+
+        Log.d("Main", String.valueOf(isFinished));
+
+        if (isFinished)
+            Toast.makeText(MainActivity.this, "Finished", Toast.LENGTH_SHORT).show();
     }
 
     @Override
