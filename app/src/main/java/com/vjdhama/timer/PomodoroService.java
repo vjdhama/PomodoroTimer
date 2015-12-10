@@ -1,5 +1,6 @@
 package com.vjdhama.timer;
 
+import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
@@ -23,10 +24,12 @@ public class PomodoroService extends Service {
     public static final String PAMADORO_SERVICE = "PomodoroService";
     public static final String SERVICE_PREFERENCES = "ServicePreferences";
     public static final String START_TIME = "StartTime";
+    public static final int NOTIFICATION_ID = 1;
     Timer timer;
     long startNewTime;
     boolean isTimerOn;
     SharedPreferences sharedPreferences;
+    Notification notification;
 
     public PomodoroService() {
         Log.d(PAMADORO_SERVICE, " Pomodoro Service Constructor");
@@ -39,31 +42,6 @@ public class PomodoroService extends Service {
         Log.d(PAMADORO_SERVICE, " StartTimer");
 
         timer.schedule(new MyTimerTask(startNewTime), 0, 1000);
-
-        NotificationManager notificationManager = (NotificationManager) getSystemService(this.NOTIFICATION_SERVICE);
-
-        Intent resultIntent = new Intent(this, MainActivity.class)
-                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-
-        PendingIntent resultPendingIntent =
-                PendingIntent.getActivity(
-                        this,
-                        0,
-                        resultIntent,
-                        PendingIntent.FLAG_UPDATE_CURRENT
-                );
-
-        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this)
-                                .setContentTitle("Pomodoro Service")
-                                .setContentText("Pomodoro Timer Started")
-                                .setSmallIcon(R.mipmap.ic_stat_pomodoro)
-                                .setContentIntent(resultPendingIntent);
-
-
-        int notifyId = 1;
-        notificationManager.notify(notifyId, notificationBuilder.build());
-
-
     }
 
     @Override
@@ -81,6 +59,7 @@ public class PomodoroService extends Service {
             startNewTime = new Date().getTime();
             sharedPreferences.edit().putLong(START_TIME, startNewTime).apply();
         }
+        startForgroundService("00:00");
         startTimer();
         return START_STICKY;
     }
@@ -89,6 +68,35 @@ public class PomodoroService extends Service {
     @Override
     public IBinder onBind(Intent intent) {
         return null;
+    }
+
+    public void startForgroundService(String message){
+
+        NotificationManager notificationManager = (NotificationManager) getSystemService(this.NOTIFICATION_SERVICE);
+
+        Intent resultIntent = new Intent(this, MainActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+
+        PendingIntent resultPendingIntent =
+                PendingIntent.getActivity(
+                        this,
+                        0,
+                        resultIntent,
+                        PendingIntent.FLAG_UPDATE_CURRENT
+                );
+
+        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this)
+                .setContentTitle("Pomodoro Service")
+                .setContentText(message)
+                .setSmallIcon(R.mipmap.ic_stat_pomodoro)
+                .setContentIntent(resultPendingIntent);
+
+        notification = notificationBuilder.build();
+
+        int notifyId = 1;
+        notificationManager.notify(notifyId, notification);
+
+        startForeground(NOTIFICATION_ID, notification);
     }
 
     public class MyTimerTask extends TimerTask {
@@ -105,14 +113,17 @@ public class PomodoroService extends Service {
             final long minutes = elapsedSecs / 60;
             Intent timerUpdateIntent = new Intent(MainActivity.BROADCAST_ACTION);
 
-            if (minutes >= 1) {
+            if (seconds >= 10) {
                 if (timer != null) {
                     timer.cancel();
                     sharedPreferences.edit().remove(START_TIME).apply();
-                    stopSelf();
+                    stopForeground(true);
                 }
                 isTimerOn = false;
 
+            }
+            else {
+                startForgroundService("Time " + minutes + ":" + seconds);
             }
             timerUpdateIntent.putExtra(MainActivity.MINUTE, minutes);
             timerUpdateIntent.putExtra(MainActivity.SECOND, seconds);
