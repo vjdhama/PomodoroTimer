@@ -2,6 +2,7 @@ package com.vjdhama.timer;
 
 import android.app.Service;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.support.v4.content.LocalBroadcastManager;
@@ -16,13 +17,16 @@ import java.util.TimerTask;
  */
 public class PomodoroService extends Service {
 
-    public static final String PAMADORO_SERVICE = "PamadoroService";
+    public static final String PAMADORO_SERVICE = "PomodoroService";
+    public static final String SERVICE_PREFERENCES = "ServicePreferences";
+    public static final String START_TIME = "StartTime";
     Timer timer;
     long startNewTime;
     boolean isTimerOn;
+    SharedPreferences sharedPreferences;
 
     public PomodoroService() {
-        Log.d(PAMADORO_SERVICE," Pomodor Service Constructor");
+        Log.d(PAMADORO_SERVICE, " Pomodoro Service Constructor");
         this.timer = new Timer();
         this.isTimerOn = false;
     }
@@ -37,9 +41,17 @@ public class PomodoroService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(PAMADORO_SERVICE, "OnStartCommand");
+
         if (isTimerOn) return START_STICKY;
+
         isTimerOn = true;
-        startNewTime = new Date().getTime();
+        sharedPreferences = getSharedPreferences(SERVICE_PREFERENCES, MODE_PRIVATE);
+        if (sharedPreferences.contains(START_TIME)) {
+            startNewTime = sharedPreferences.getLong(START_TIME, new Date().getTime());
+        } else {
+            startNewTime = new Date().getTime();
+            sharedPreferences.edit().putLong(START_TIME, startNewTime).apply();
+        }
         startTimer();
         return START_STICKY;
     }
@@ -67,6 +79,7 @@ public class PomodoroService extends Service {
             if (minutes >= 1) {
                 if (timer != null) {
                     timer.cancel();
+                    sharedPreferences.edit().remove(START_TIME).apply();
                     stopSelf();
                 }
                 isTimerOn = false;
