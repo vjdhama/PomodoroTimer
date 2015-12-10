@@ -1,10 +1,13 @@
 package com.vjdhama.timer;
 
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
+import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
@@ -36,6 +39,32 @@ public class PomodoroService extends Service {
         Log.d(PAMADORO_SERVICE, " StartTimer");
 
         timer.schedule(new MyTimerTask(startNewTime), 0, 1000);
+
+        NotificationManager notificationManager = (NotificationManager) getSystemService(this.NOTIFICATION_SERVICE);
+
+        Intent resultIntent = new Intent(this, MainActivity.class)
+                .setAction(Intent.ACTION_MAIN)
+                .addCategory(Intent.CATEGORY_LAUNCHER);
+
+        PendingIntent resultPendingIntent =
+                PendingIntent.getActivity(
+                        this,
+                        0,
+                        resultIntent,
+                        PendingIntent.FLAG_UPDATE_CURRENT
+                );
+
+        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this)
+                                .setContentTitle("Pomodoro Service")
+                                .setContentText("Pomodoro Timer Started")
+                                .setSmallIcon(R.mipmap.ic_stat_pomodoro)
+                                .setContentIntent(resultPendingIntent);
+
+
+        int notifyId = 1;
+        notificationManager.notify(notifyId, notificationBuilder.build());
+
+
     }
 
     @Override
@@ -46,6 +75,7 @@ public class PomodoroService extends Service {
 
         isTimerOn = true;
         sharedPreferences = getSharedPreferences(SERVICE_PREFERENCES, MODE_PRIVATE);
+
         if (sharedPreferences.contains(START_TIME)) {
             startNewTime = sharedPreferences.getLong(START_TIME, new Date().getTime());
         } else {
